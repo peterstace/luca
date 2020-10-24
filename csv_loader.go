@@ -23,6 +23,7 @@ type transactionFile struct {
 }
 
 type transactionRecord struct {
+	id          string
 	date        string
 	drAccount   string
 	crAccount   string
@@ -73,7 +74,14 @@ func (m *CSVLoader) LoadCSV(r io.Reader, filename string) error {
 	case reflect.DeepEqual(recs[0], txnHeader):
 		var txns []transactionRecord
 		for _, rec := range recs[1:] {
-			txns = append(txns, transactionRecord{rec[0], rec[1], rec[2], rec[3], rec[4]})
+			txns = append(txns, transactionRecord{"", rec[0], rec[1], rec[2], rec[3], rec[4]})
+		}
+		m.txns = append(m.txns, transactionFile{filename, txns})
+		return nil
+	case reflect.DeepEqual(recs[0], txnWithIDHeader):
+		var txns []transactionRecord
+		for _, rec := range recs[1:] {
+			txns = append(txns, transactionRecord{rec[0], rec[1], rec[2], rec[3], rec[4], rec[5]})
 		}
 		m.txns = append(m.txns, transactionFile{filename, txns})
 		return nil
@@ -97,6 +105,9 @@ var (
 	}
 	txnHeader = []string{
 		"Date", "DR", "CR", "Amount", "Description",
+	}
+	txnWithIDHeader = []string{
+		"ID", "Date", "DR", "CR", "Amount", "Description",
 	}
 	amortHeader = []string{
 		"TxnDate", "StartDate", "EndDate",
@@ -130,6 +141,7 @@ func (m *CSVLoader) Book() (Book, error) {
 			}
 
 			if err := book.AddSingleTransaction(Transaction{
+				ID:   txn.id,
 				Date: date,
 				Account: Accounts{
 					DR: txn.drAccount,

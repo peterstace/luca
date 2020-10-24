@@ -13,6 +13,7 @@ type Book struct {
 }
 
 type Transaction struct {
+	ID          string    `json:"id"`
 	Date        date.Date `json:"date"`
 	Account     Accounts  `json:"account"`
 	Amount      Amount    `json:"amount"`
