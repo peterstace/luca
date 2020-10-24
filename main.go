@@ -11,21 +11,24 @@ import (
 
 func main() {
 	csvDir := flag.String("csv-dir", os.ExpandEnv("$LUCA_CSV_DIR"), "directory containing csvs")
-	operation := flag.String("operation", "ledger", "operation to perform")
+	operation := flag.String("operation", "", "operation to perform")
 	account := flag.String("account", "", "account to operate on")
 	flag.Parse()
 
 	if *csvDir == "" {
 		fmt.Fprintf(os.Stderr, "CSV dir not set (--csv-dir flag or LUCA_CSV_DIR env)\n")
 		flag.Usage()
+		os.Exit(1)
 	}
 	if *operation == "" {
 		fmt.Fprintf(os.Stderr, "Operation not set (--operation flag)")
 		flag.Usage()
+		os.Exit(1)
 	}
 	if *account == "" {
 		fmt.Fprintf(os.Stderr, "Account not set (--account flag)")
 		flag.Usage()
+		os.Exit(1)
 	}
 
 	switch *operation {
@@ -34,10 +37,12 @@ func main() {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "could not build book: %v\n", err)
 			flag.Usage()
+			os.Exit(1)
 		}
 		if len(book.Accounts()) == 0 {
 			fmt.Fprintf(os.Stderr, "loaded 0 accounts\n")
 			flag.Usage()
+			os.Exit(1)
 		}
 		ledger := book.AccountLedger(*account)
 		buf, err := json.Marshal(ledger)
@@ -48,6 +53,7 @@ func main() {
 	default:
 		fmt.Fprintf(os.Stderr, "unknown operation %q", *operation)
 		flag.Usage()
+		os.Exit(1)
 	}
 }
 
