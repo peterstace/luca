@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 )
 
 func main() {
@@ -31,30 +32,42 @@ func main() {
 		os.Exit(1)
 	}
 
+	var op func(b Book, account string) (interface{}, error)
 	switch *operation {
 	case "ledger":
-		book, err := buildBook(*csvDir)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "could not build book: %v\n", err)
-			flag.Usage()
-			os.Exit(1)
-		}
-		if len(book.Accounts()) == 0 {
-			fmt.Fprintf(os.Stderr, "loaded 0 accounts\n")
-			flag.Usage()
-			os.Exit(1)
-		}
-		ledger := book.AccountLedger(*account)
-		buf, err := json.Marshal(ledger)
-		if err != nil {
-			panic(fmt.Sprintf("could not marshal account ledger: %v", err))
-		}
-		os.Stdout.Write(buf)
+		op = ledgerOperation
+	case "summary":
+		op = summaryOperation
 	default:
 		fmt.Fprintf(os.Stderr, "unknown operation %q", *operation)
 		flag.Usage()
 		os.Exit(1)
 	}
+
+	book, err := buildBook(*csvDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "could not build book: %v\n", err)
+		flag.Usage()
+		os.Exit(1)
+	}
+	if len(book.Accounts()) == 0 {
+		fmt.Fprintf(os.Stderr, "loaded 0 accounts\n")
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	result, err := op(book, *account)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "could not perform operation %v: %v\n", *operation, err)
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	buf, err := json.Marshal(result)
+	if err != nil {
+		panic(fmt.Sprintf("could not marshal result: %v", err))
+	}
+	os.Stdout.Write(buf)
 }
 
 func buildBook(csvDir string) (Book, error) {
@@ -79,4 +92,18 @@ func buildBook(csvDir string) (Book, error) {
 		}
 	}
 	return loader.Book()
+}
+
+func ledgerOperation(b Book, account string) (interface{}, error) {
+	ledger := b.AccountLedger(account)
+	return ledger, nil
+}
+
+func summaryOperation(b Book, account string) (interface{}, error) {
+	accountsRegexp, err := regexp.Compile(account)
+	if err != nil {
+		return nil, err
+	}
+	summaries := b.SummariseAccounts(accountsRegexp)
+	return summaries, nil
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"regexp"
 	"sort"
 
 	"github.com/peterstace/date"
@@ -141,6 +142,44 @@ func (m *Book) AccountLedger(account string) []AccountLedgerEntry {
 		}
 	}
 	return entries
+}
+
+type AccountSummary struct {
+	Account          string    `json:"account"`
+	Balance          Amount    `json:"balance"`
+	LastTransaction  date.Date `json:"lastTransactionDate"`
+	TransactionCount int       `json:"transactionCount"`
+}
+
+func (m *Book) SummariseAccounts(accounts *regexp.Regexp) []AccountSummary {
+	summariesMap := make(map[string]AccountSummary)
+	for _, txn := range m.AllTransactions() {
+		update := func(account string, neg bool) {
+			if !accounts.MatchString(account) {
+				return
+			}
+			summary := summariesMap[account]
+			summary.Account = account
+			if neg {
+				summary.Balance -= txn.Amount
+			} else {
+				summary.Balance += txn.Amount
+			}
+			summary.LastTransaction = txn.Date
+			summary.TransactionCount++
+			summariesMap[account] = summary
+		}
+		update(txn.Account.DR, false)
+		update(txn.Account.CR, true)
+	}
+	summariesList := make([]AccountSummary, 0, len(summariesMap))
+	for _, summary := range summariesMap {
+		summariesList = append(summariesList, summary)
+	}
+	sort.Slice(summariesList, func(i, j int) bool {
+		return summariesList[i].Account < summariesList[j].Account
+	})
+	return summariesList
 }
 
 func (m *Book) Series(account string) (date.Date, []Amount) {
