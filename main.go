@@ -22,12 +22,12 @@ func main() {
 		os.Exit(1)
 	}
 	if *operation == "" {
-		fmt.Fprintf(os.Stderr, "Operation not set (--operation flag)")
+		fmt.Fprintf(os.Stderr, "Operation not set (--operation flag)\n")
 		flag.Usage()
 		os.Exit(1)
 	}
 	if *account == "" {
-		fmt.Fprintf(os.Stderr, "Account not set (--account flag)")
+		fmt.Fprintf(os.Stderr, "Account not set (--account flag)\n")
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -39,7 +39,7 @@ func main() {
 	case "summary":
 		op = summaryOperation
 	default:
-		fmt.Fprintf(os.Stderr, "unknown operation %q", *operation)
+		fmt.Fprintf(os.Stderr, "unknown operation %q\n", *operation)
 		flag.Usage()
 		os.Exit(1)
 	}
