@@ -26,7 +26,7 @@ func main() {
 		flag.Usage()
 		os.Exit(1)
 	}
-	if *account == "" {
+	if *account == "" && *operation != "coa" {
 		fmt.Fprintf(os.Stderr, "Account not set (--account flag)\n")
 		flag.Usage()
 		os.Exit(1)
@@ -38,6 +38,8 @@ func main() {
 		op = ledgerOperation
 	case "summary":
 		op = summaryOperation
+	case "coa":
+		op = coaOperation
 	default:
 		fmt.Fprintf(os.Stderr, "unknown operation %q\n", *operation)
 		flag.Usage()
@@ -106,4 +108,8 @@ func summaryOperation(b Book, account string) (interface{}, error) {
 	}
 	summaries := b.SummariseAccounts(accountsRegexp)
 	return summaries, nil
+}
+
+func coaOperation(b Book, _ string) (interface{}, error) {
+	return b.Accounts(), nil
 }
