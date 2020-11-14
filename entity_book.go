@@ -182,19 +182,38 @@ func (m *Book) SummariseAccounts(accounts *regexp.Regexp) []AccountSummary {
 	return summariesList
 }
 
-func (m *Book) Series(account string) (date.Date, []Amount) {
-	ledger := m.AccountLedger(account)
-	if len(ledger) == 0 {
-		return 0, nil
+type Series struct {
+	Entries []SeriesEntry `json:"entries"`
+}
+
+type SeriesEntry struct {
+	Date    date.Date `json:"date"`
+	Balance Amount    `json:"balance"`
+}
+
+func (m *Book) Series(accounts *regexp.Regexp) Series {
+	txns := m.AllTransactions()
+	if len(txns) == 0 {
+		return Series{}
 	}
 
-	var series []Amount
+	start := txns[0].Date
+	end := txns[len(txns)-1].Date
 	var i int
-	for d := ledger[0].Date; d <= ledger[len(ledger)-1].Date; d++ {
-		for i+1 < len(ledger) && ledger[i+1].Date <= d {
+	var bal Amount
+	var entries []SeriesEntry
+	for d := start; d <= end; d++ {
+		for i+1 < len(txns) && txns[i+1].Date <= d {
 			i++
+			txn := txns[i]
+			if accounts.MatchString(txn.Account.DR) {
+				bal += txn.Amount
+			}
+			if accounts.MatchString(txn.Account.CR) {
+				bal -= txn.Amount
+			}
 		}
-		series = append(series, ledger[i].Balance)
+		entries = append(entries, SeriesEntry{d, bal})
 	}
-	return ledger[0].Date, series
+	return Series{entries}
 }

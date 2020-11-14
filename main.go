@@ -40,6 +40,8 @@ func main() {
 		op = summaryOperation
 	case "coa":
 		op = coaOperation
+	case "series":
+		op = seriesOperation
 	default:
 		fmt.Fprintf(os.Stderr, "unknown operation %q\n", *operation)
 		flag.Usage()
@@ -106,10 +108,17 @@ func summaryOperation(b Book, account string) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	summaries := b.SummariseAccounts(accountsRegexp)
-	return summaries, nil
+	return b.SummariseAccounts(accountsRegexp), nil
 }
 
 func coaOperation(b Book, _ string) (interface{}, error) {
 	return b.Accounts(), nil
+}
+
+func seriesOperation(b Book, account string) (interface{}, error) {
+	accountsRegexp, err := regexp.Compile(account)
+	if err != nil {
+		return nil, err
+	}
+	return b.Series(accountsRegexp), nil
 }
