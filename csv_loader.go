@@ -12,9 +12,8 @@ import (
 )
 
 type CSVLoader struct {
-	coa    map[string]struct{}
-	txns   []transactionFile
-	amorts []amortisationFile
+	coa  map[string]struct{}
+	txns []transactionFile
 }
 
 type transactionFile struct {
@@ -29,23 +28,6 @@ type transactionRecord struct {
 	crAccount   string
 	amount      string
 	description string
-}
-
-type amortisationFile struct {
-	filename string
-	amorts   []amortisationRecord
-}
-
-type amortisationRecord struct {
-	txnDate         string
-	startDate       string
-	endDate         string
-	singleDRAccount string
-	singleCRAccount string
-	repeatDRAccount string
-	repeatCRAccount string
-	amount          string
-	description     string
 }
 
 func (m *CSVLoader) LoadCSV(r io.Reader, filename string) error {
@@ -85,15 +67,6 @@ func (m *CSVLoader) LoadCSV(r io.Reader, filename string) error {
 		}
 		m.txns = append(m.txns, transactionFile{filename, txns})
 		return nil
-	case reflect.DeepEqual(recs[0], amortHeader):
-		var amorts []amortisationRecord
-		for _, rec := range recs[1:] {
-			amorts = append(amorts, amortisationRecord{
-				rec[0], rec[1], rec[2], rec[3], rec[4], rec[5], rec[6], rec[7], rec[8]},
-			)
-		}
-		m.amorts = append(m.amorts, amortisationFile{filename, amorts})
-		return nil
 	default:
 		return fmt.Errorf("unknown header: %v", recs[0])
 	}
@@ -108,11 +81,6 @@ var (
 	}
 	txnWithIDHeader = []string{
 		"ID", "Date", "DR", "CR", "Amount", "Description",
-	}
-	amortHeader = []string{
-		"TxnDate", "StartDate", "EndDate",
-		"SingleDR", "SingleCR", "RepeatDR", "RepeatCR",
-		"Amount", "Description",
 	}
 )
 
@@ -155,55 +123,5 @@ func (m *CSVLoader) Book() (Book, error) {
 		}
 	}
 
-	for _, amortFile := range m.amorts {
-		var prevDate date.Date
-		for _, amort := range amortFile.amorts {
-			txnDate, err := date.FromString(amort.txnDate)
-			if err != nil {
-				return Book{}, fmt.Errorf("invalid date: %v", err)
-			} else if txnDate < prevDate {
-				return Book{}, fmt.Errorf(
-					"decreasing dates: %v and %v in file %v",
-					prevDate, txnDate, amortFile.filename,
-				)
-			}
-			prevDate = txnDate
-
-			startDate, err := date.FromString(amort.startDate)
-			if err != nil {
-				return Book{}, fmt.Errorf("invalid date: %v", err)
-			}
-			endDate, err := date.FromString(amort.endDate)
-			if err != nil {
-				return Book{}, fmt.Errorf("invalid date: %v", err)
-			}
-
-			amount, err := AmountFromString(amort.amount)
-			if err != nil {
-				return Book{}, fmt.Errorf("invalid amount: %v", err)
-			}
-
-			amortTxn := AmortizedTransaction{
-				SingleDate: txnDate,
-				DateRange: DateRange{
-					StartInclusive: startDate,
-					EndExclusive:   endDate,
-				},
-				Single: Accounts{
-					DR: amort.singleDRAccount,
-					CR: amort.singleCRAccount,
-				},
-				Repeat: Accounts{
-					DR: amort.repeatDRAccount,
-					CR: amort.repeatCRAccount,
-				},
-				Amount:      amount,
-				Description: amort.description,
-			}
-			if err := book.AddAmortizedTransaction(amortTxn); err != nil {
-				return Book{}, fmt.Errorf("could not add amort transaction: %v", err)
-			}
-		}
-	}
 	return book, nil
 }

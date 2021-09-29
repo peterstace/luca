@@ -8,9 +8,8 @@ import (
 )
 
 type Book struct {
-	accounts              map[string]struct{}
-	singleTxns            []Transaction
-	AmortizedTransactions []AmortizedTransaction
+	accounts map[string]struct{}
+	txns     []Transaction
 }
 
 type Transaction struct {
@@ -21,23 +20,9 @@ type Transaction struct {
 	Description string    `json:"description"`
 }
 
-type AmortizedTransaction struct {
-	SingleDate  date.Date
-	DateRange   DateRange
-	Single      Accounts
-	Repeat      Accounts
-	Amount      Amount
-	Description string
-}
-
 type Accounts struct {
 	DR string `json:"dr"`
 	CR string `json:"cr"`
-}
-
-type DateRange struct {
-	StartInclusive date.Date
-	EndExclusive   date.Date
 }
 
 func (m *Book) AddAccount(accountName string) {
@@ -66,48 +51,12 @@ func (b *Book) AddSingleTransaction(txn Transaction) error {
 	if txn.Amount < 0 {
 		return ErrNegativeAmount
 	}
-	b.singleTxns = append(b.singleTxns, txn)
-	return nil
-}
-
-func (b *Book) AddAmortizedTransaction(txn AmortizedTransaction) error {
-	for _, acc := range []string{
-		txn.Single.DR,
-		txn.Single.CR,
-		txn.Repeat.DR,
-		txn.Repeat.CR,
-	} {
-		if _, ok := b.accounts[acc]; !ok {
-			return UnknownAccountError{acc}
-		}
-	}
-	if txn.Amount < 0 {
-		return ErrNegativeAmount
-	}
-	b.AmortizedTransactions = append(b.AmortizedTransactions, txn)
+	b.txns = append(b.txns, txn)
 	return nil
 }
 
 func (m *Book) AllTransactions() []Transaction {
-	all := m.singleTxns
-	for _, amort := range m.AmortizedTransactions {
-		all = append(all, Transaction{
-			Date:        amort.SingleDate,
-			Account:     amort.Single,
-			Amount:      amort.Amount,
-			Description: amort.Description,
-		})
-		for d := amort.DateRange.StartInclusive; d < amort.DateRange.EndExclusive; d++ {
-			amount := amort.Amount / Amount(amort.DateRange.EndExclusive-d)
-			amort.Amount -= amount
-			all = append(all, Transaction{
-				Date:        d,
-				Account:     amort.Repeat,
-				Amount:      amount,
-				Description: amort.Description,
-			})
-		}
-	}
+	all := m.txns
 	sort.SliceStable(all, func(i, j int) bool {
 		return all[i].Date < all[j].Date
 	})
