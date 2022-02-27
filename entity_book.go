@@ -146,11 +146,18 @@ func (m *Book) Series(accounts *regexp.Regexp) Series {
 		return Series{}
 	}
 
-	start := txns[0].Date
 	end := txns[len(txns)-1].Date
+	start := end + 1
+	for _, txn := range txns {
+		if accounts.MatchString(txn.Account.DR) || accounts.MatchString(txn.Account.CR) {
+			start = txn.Date
+			break
+		}
+	}
+
 	var i int
 	var bal Amount
-	var entries []SeriesEntry
+	entries := make([]SeriesEntry, 0, end-start+1)
 	for d := start; d <= end; d++ {
 		for i+1 < len(txns) && txns[i+1].Date <= d {
 			i++
