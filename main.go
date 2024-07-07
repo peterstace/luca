@@ -42,6 +42,8 @@ func main() {
 		op = coaOperation
 	case "series":
 		op = seriesOperation
+	case "reconstruct":
+		op = reconstructOperation
 	default:
 		fmt.Fprintf(os.Stderr, "unknown operation %q\n", *operation)
 		flag.Usage()
@@ -121,4 +123,8 @@ func seriesOperation(b Book, account string) (interface{}, error) {
 		return nil, err
 	}
 	return b.Series(accountsRegexp), nil
+}
+
+func reconstructOperation(b Book, account string) (interface{}, error) {
+	return b.Reconstruct(account), nil
 }

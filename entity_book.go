@@ -3,6 +3,7 @@ package main
 import (
 	"regexp"
 	"sort"
+	"strconv"
 
 	"github.com/peterstace/date"
 )
@@ -172,4 +173,42 @@ func (m *Book) Series(accounts *regexp.Regexp) Series {
 		entries = append(entries, SeriesEntry{d, bal})
 	}
 	return Series{entries}
+}
+
+func (m *Book) Reconstruct(account string) [][]string {
+	header := []string{
+		"date",
+		"amount",
+		"balance",
+		"other_account",
+		"description",
+	}
+	rows := [][]string{header}
+
+	var balance Amount
+	for _, txn := range m.AllTransactions() {
+		if txn.Account.CR != account && txn.Account.DR != account {
+			continue
+		}
+		other := txn.Account.DR
+		if other == account {
+			other = txn.Account.CR
+		}
+
+		amount := txn.Amount
+		if txn.Account.DR == account {
+			amount *= -1
+		}
+		balance += amount
+
+		row := []string{
+			txn.Date.String(),
+			strconv.FormatFloat(float64(amount)/100, 'f', 2, 64),
+			strconv.FormatFloat(float64(balance)/100, 'f', 2, 64),
+			other,
+			txn.Description,
+		}
+		rows = append(rows, row)
+	}
+	return rows
 }
