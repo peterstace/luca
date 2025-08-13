@@ -196,7 +196,7 @@ func (m *Book) Reconstruct(account string) [][]string {
 		}
 
 		amount := txn.Amount
-		if txn.Account.DR == account {
+		if txn.Account.CR == account {
 			amount *= -1
 		}
 		balance += amount
